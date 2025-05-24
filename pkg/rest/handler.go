@@ -36,7 +36,7 @@ func (h *Handler) InitRouter() *mux.Router {
 	r.Use(loggingMiddleware)
 	r.Use(handlers.CORS(
 		handlers.AllowedOrigins([]string{"http://localhost:3000"}),
-		handlers.AllowedMethods([]string{"GET", "POST", "PUT", "DELETE", "OPTIONS"}),
+		handlers.AllowedMethods([]string{http.MethodGet, http.MethodPost, http.MethodPut, http.MethodDelete, "OPTIONS"}),
 		handlers.AllowedHeaders([]string{"X-Requested-With", "Content-Type", "Authorization"}),
 	))
 
