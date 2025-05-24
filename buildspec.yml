@@ -20,5 +20,4 @@ phases:
 artifacts:
   files:
     - imagedefinitions.json
-    - appspec.yml
   discard-paths: yes
