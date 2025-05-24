@@ -29,7 +29,7 @@ func main() {
 	handler := rest.NewHandler(usersService)
 	router := handler.InitRouter()
 	router.Use(handlers.CORS(
-		handlers.AllowedOrigins([]string{"*"}),
+		handlers.AllowedOrigins([]string{"http://localhost:3000"}),
 		handlers.AllowedMethods([]string{"GET", "POST", "PUT", "DELETE", "OPTIONS"}),
 		handlers.AllowedHeaders([]string{"X-Requested-With", "Content-Type", "Authorization"}),
 	))
