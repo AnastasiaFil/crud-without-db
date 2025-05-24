@@ -35,18 +35,18 @@ func (h *Handler) InitRouter() *mux.Router {
 	r := mux.NewRouter()
 	r.Use(loggingMiddleware)
 	r.Use(handlers.CORS(
-		handlers.AllowedOrigins([]string{"http://localhost:3000"}),
-		handlers.AllowedMethods([]string{http.MethodGet, http.MethodPost, http.MethodPut, http.MethodDelete, "OPTIONS"}),
+		handlers.AllowedOrigins([]string{"*"}),
+		handlers.AllowedMethods([]string{"GET", "POST", "PUT", "DELETE", "OPTIONS"}),
 		handlers.AllowedHeaders([]string{"X-Requested-With", "Content-Type", "Authorization"}),
 	))
 
 	users := r.PathPrefix("/users").Subrouter()
 	{
-		users.HandleFunc("", h.createUser).Methods(http.MethodPost)
-		users.HandleFunc("", h.getAllUsers).Methods(http.MethodGet)
-		users.HandleFunc("/{id}", h.getUserByID).Methods(http.MethodGet)
-		users.HandleFunc("/{id}", h.deleteUser).Methods(http.MethodDelete)
-		users.HandleFunc("/{id}", h.updateUser).Methods(http.MethodPut)
+		users.HandleFunc("", h.createUser).Methods("POST")
+		users.HandleFunc("", h.getAllUsers).Methods("GET")
+		users.HandleFunc("/{id}", h.getUserByID).Methods("GET")
+		users.HandleFunc("/{id}", h.deleteUser).Methods("DELETE")
+		users.HandleFunc("/{id}", h.updateUser).Methods("PUT")
 	}
 
 	return r

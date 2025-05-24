@@ -12,7 +12,6 @@ import (
 	"crud-without-db/internal/repository/psql"
 	"crud-without-db/internal/service"
 	"crud-without-db/pkg/rest"
-	"github.com/gorilla/handlers"
 	httpSwagger "github.com/swaggo/http-swagger"
 	"log"
 	"net/http"
@@ -28,11 +27,6 @@ func main() {
 	usersService := service.NewUsers(usersRepo)
 	handler := rest.NewHandler(usersService)
 	router := handler.InitRouter()
-	router.Use(handlers.CORS(
-		handlers.AllowedOrigins([]string{"http://localhost:3000"}),
-		handlers.AllowedMethods([]string{"GET", "POST", "PUT", "DELETE", "OPTIONS"}),
-		handlers.AllowedHeaders([]string{"X-Requested-With", "Content-Type", "Authorization"}),
-	))
 
 	// Add Swagger UI route
 	router.PathPrefix("/swagger/").Handler(httpSwagger.WrapHandler)
