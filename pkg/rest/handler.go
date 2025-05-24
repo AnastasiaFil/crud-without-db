@@ -37,7 +37,7 @@ func (h *Handler) InitRouter() *mux.Router {
 	r.Use(handlers.CORS(
 		handlers.AllowedOrigins([]string{"*"}), // Allow all origins (not recommended for production)
 		handlers.AllowedMethods([]string{"GET", "POST", "PUT", "DELETE", "OPTIONS"}),
-		handlers.AllowedHeaders([]string{"Content-Type", "Authorization"}),
+		handlers.AllowedHeaders([]string{"X-Requested-With", "Content-Type", "Authorization"}),
 	))
 
 	users := r.PathPrefix("/users").Subrouter()
