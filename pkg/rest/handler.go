@@ -4,6 +4,7 @@ import (
 	"crud-without-db/internal/domain"
 	"encoding/json"
 	"errors"
+	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 	"io"
 	"io/ioutil"
@@ -33,6 +34,11 @@ func NewHandler(users Users) *Handler {
 func (h *Handler) InitRouter() *mux.Router {
 	r := mux.NewRouter()
 	r.Use(loggingMiddleware)
+	r.Use(handlers.CORS(
+		handlers.AllowedOrigins([]string{"*"}), // Allow all origins (not recommended for production)
+		handlers.AllowedMethods([]string{"GET", "POST", "PUT", "DELETE", "OPTIONS"}),
+		handlers.AllowedHeaders([]string{"Content-Type", "Authorization"}),
+	))
 
 	users := r.PathPrefix("/users").Subrouter()
 	{
