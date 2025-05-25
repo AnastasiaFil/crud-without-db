@@ -1,6 +1,6 @@
-// @title CRUD Without DB API
+// @title CRUD API with PostgreSQL
 // @version 1.0
-// @description This is a sample server for a CRUD application without a database.
+// @description This is a CRUD application with PostgreSQL database.
 // @host
 // @BasePath /
 // @schemes http
@@ -11,6 +11,7 @@ import (
 	_ "crud-without-db/docs"
 	"crud-without-db/internal/repository/psql"
 	"crud-without-db/internal/service"
+	"crud-without-db/pkg/db"
 	"crud-without-db/pkg/rest"
 	"github.com/gorilla/handlers"
 	httpSwagger "github.com/swaggo/http-swagger"
@@ -23,8 +24,23 @@ import (
 )
 
 func main() {
-	// init deps
-	usersRepo := psql.NewUsers()
+	// Initialize database connection
+	dbConfig := db.NewConfigFromEnv()
+	database, err := db.NewPostgresConnection(dbConfig)
+	if err != nil {
+		log.Fatalf("Failed to connect to database: %v", err)
+	}
+	defer database.Close()
+
+	// Initialize repository with database connection
+	usersRepo := psql.NewUsers(database)
+
+	// Initialize database schema
+	if err := usersRepo.InitSchema(); err != nil {
+		log.Fatalf("Failed to initialize database schema: %v", err)
+	}
+
+	// Initialize service and handler
 	usersService := service.NewUsers(usersRepo)
 	handler := rest.NewHandler(usersService)
 	router := handler.InitRouter()
@@ -60,11 +76,11 @@ func main() {
 	// Add Swagger UI route with custom configuration
 	router.PathPrefix("/swagger/").Handler(httpSwagger.WrapHandler)
 
-	// Add a test endpoint to verify CORS is working
+	// Add a health endpoint
 	router.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`{"status": "healthy", "cors": "enabled"}`))
+		w.Write([]byte(`{"status": "healthy", "database": "connected", "cors": "enabled"}`))
 	}).Methods("GET", "OPTIONS")
 
 	// Dynamic swagger.json endpoint that uses the current request host
@@ -82,8 +98,8 @@ func main() {
     "schemes": ["http"],
     "swagger": "2.0",
     "info": {
-        "description": "This is a sample server for a CRUD application without a database.",
-        "title": "CRUD Without DB API",
+        "description": "This is a CRUD application with PostgreSQL database.",
+        "title": "CRUD API with PostgreSQL",
         "contact": {},
         "version": "1.0"
     },
@@ -210,7 +226,7 @@ func main() {
 		w.Write([]byte(swaggerJSON))
 	}).Methods("GET")
 
-	// init & run server
+	// Initialize & run server
 	srv := &http.Server{
 		Addr:    ":3000",
 		Handler: router,
@@ -235,6 +251,7 @@ func main() {
 
 	// Start the server
 	log.Println("Server starting on :3000")
+	log.Printf("Database connected to: %s:%d/%s", dbConfig.Host, dbConfig.Port, dbConfig.DBName)
 	if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 		log.Fatalf("listen: %s\n", err)
 	}

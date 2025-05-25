@@ -5,18 +5,22 @@ phases:
     commands:
       - echo Logging in to Amazon ECR...
       - aws ecr get-login-password --region eu-north-1 | docker login --username AWS --password-stdin 476683275943.dkr.ecr.eu-north-1.amazonaws.com
+      - echo Logged in to ECR
   build:
     commands:
       - echo Build started on `date`
       - echo Building the Docker image...
       - docker build --platform linux/x86_64 -t crud-without-db .
       - docker tag crud-without-db:latest 476683275943.dkr.ecr.eu-north-1.amazonaws.com/crud-without-db:latest
+      - echo Build completed on `date`
   post_build:
     commands:
-      - echo Build completed on `date`
+      - echo Post-build started on `date`
       - echo Pushing the Docker image...
       - docker push 476683275943.dkr.ecr.eu-north-1.amazonaws.com/crud-without-db:latest
+      - echo Creating imagedefinitions.json
       - printf '[{"name":"crud-without-db-container","imageUri":"%s"}]' 476683275943.dkr.ecr.eu-north-1.amazonaws.com/crud-without-db:latest > imagedefinitions.json
+      - echo Post-build completed on `date`
 artifacts:
   files:
     - imagedefinitions.json
