@@ -1,7 +1,7 @@
 // @title CRUD Without DB API
 // @version 1.0
 // @description This is a sample server for a CRUD application without a database.
-// @host 16.171.25.228:3000
+// @host
 // @BasePath /
 // @schemes http
 package main
@@ -57,7 +57,7 @@ func main() {
 	// Apply CORS middleware to the router
 	router.Use(corsHandler)
 
-	// Add Swagger UI route
+	// Add Swagger UI route with custom configuration
 	router.PathPrefix("/swagger/").Handler(httpSwagger.WrapHandler)
 
 	// Add a test endpoint to verify CORS is working
@@ -66,6 +66,149 @@ func main() {
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte(`{"status": "healthy", "cors": "enabled"}`))
 	}).Methods("GET", "OPTIONS")
+
+	// Dynamic swagger.json endpoint that uses the current request host
+	router.HandleFunc("/swagger/doc.json", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+
+		// Get the host from the request
+		host := r.Host
+		if host == "" {
+			host = "localhost:3000" // fallback
+		}
+
+		// Create dynamic swagger JSON with current host
+		swaggerJSON := `{
+    "schemes": ["http"],
+    "swagger": "2.0",
+    "info": {
+        "description": "This is a sample server for a CRUD application without a database.",
+        "title": "CRUD Without DB API",
+        "contact": {},
+        "version": "1.0"
+    },
+    "host": "` + host + `",
+    "basePath": "/",
+    "paths": {
+        "/users": {
+            "get": {
+                "description": "Get a list of all users",
+                "produces": ["application/json"],
+                "tags": ["users"],
+                "summary": "Get all users",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {"$ref": "#/definitions/domain.User"}
+                        }
+                    }
+                }
+            },
+            "post": {
+                "description": "Create a new user",
+                "consumes": ["application/json"],
+                "produces": ["application/json"],
+                "tags": ["users"],
+                "summary": "Create a new user",
+                "parameters": [{
+                    "description": "Create user",
+                    "name": "user",
+                    "in": "body",
+                    "required": true,
+                    "schema": {"$ref": "#/definitions/domain.User"}
+                }],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {"$ref": "#/definitions/domain.User"}
+                    }
+                }
+            }
+        },
+        "/users/{id}": {
+            "get": {
+                "description": "Get a user by their ID",
+                "produces": ["application/json"],
+                "tags": ["users"],
+                "summary": "Get a user by ID",
+                "parameters": [{
+                    "type": "integer",
+                    "description": "User ID",
+                    "name": "id",
+                    "in": "path",
+                    "required": true
+                }],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {"$ref": "#/definitions/domain.User"}
+                    }
+                }
+            },
+            "put": {
+                "description": "Update a user by their ID",
+                "consumes": ["application/json"],
+                "produces": ["application/json"],
+                "tags": ["users"],
+                "summary": "Update a user",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "User ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Update user",
+                        "name": "user",
+                        "in": "body",
+                        "required": true,
+                        "schema": {"$ref": "#/definitions/domain.User"}
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {"$ref": "#/definitions/domain.User"}
+                    }
+                }
+            },
+            "delete": {
+                "description": "Delete a user by their ID",
+                "produces": ["application/json"],
+                "tags": ["users"],
+                "summary": "Delete a user",
+                "parameters": [{
+                    "type": "integer",
+                    "description": "User ID",
+                    "name": "id",
+                    "in": "path",
+                    "required": true
+                }],
+                "responses": {
+                    "204": {"description": "No Content"}
+                }
+            }
+        }
+    },
+    "definitions": {
+        "domain.User": {
+            "type": "object",
+            "properties": {
+                "age": {"type": "integer"},
+                "id": {"type": "integer"},
+                "name": {"type": "string"},
+                "sex": {"type": "string"}
+            }
+        }
+    }
+}`
+
+		w.Write([]byte(swaggerJSON))
+	}).Methods("GET")
 
 	// init & run server
 	srv := &http.Server{

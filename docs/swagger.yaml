@@ -11,7 +11,6 @@ definitions:
       sex:
         type: string
     type: object
-host: 16.171.25.228:3000
 info:
   contact: {}
   description: This is a sample server for a CRUD application without a database.
