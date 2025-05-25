@@ -1,10 +1,10 @@
 package service
 
-import (
-	"crud-without-db/internal/domain"
-)
+import "crud-without-db/internal/domain"
 
-type UsersRepository interface {
+//go:generate mockgen -source=user.go -destination=mocks/mock.go
+
+type UsersRepo interface {
 	Create(user domain.User) error
 	GetByID(id int64) (domain.User, error)
 	GetAll() ([]domain.User, error)
@@ -13,31 +13,29 @@ type UsersRepository interface {
 }
 
 type Users struct {
-	repo UsersRepository
+	repo UsersRepo
 }
 
-func NewUsers(repo UsersRepository) *Users {
-	return &Users{
-		repo: repo,
-	}
+func NewUsers(repo UsersRepo) *Users {
+	return &Users{repo: repo}
 }
 
-func (b *Users) Create(user domain.User) error {
-	return b.repo.Create(user)
+func (s *Users) Create(user domain.User) error {
+	return s.repo.Create(user)
 }
 
-func (b *Users) GetByID(id int64) (domain.User, error) {
-	return b.repo.GetByID(id)
+func (s *Users) GetByID(id int64) (domain.User, error) {
+	return s.repo.GetByID(id)
 }
 
-func (b *Users) GetAll() ([]domain.User, error) {
-	return b.repo.GetAll()
+func (s *Users) GetAll() ([]domain.User, error) {
+	return s.repo.GetAll()
 }
 
-func (b *Users) Delete(id int64) error {
-	return b.repo.Delete(id)
+func (s *Users) Delete(id int64) error {
+	return s.repo.Delete(id)
 }
 
-func (b *Users) Update(id int64, inp domain.User) error {
-	return b.repo.Update(id, inp)
+func (s *Users) Update(id int64, inp domain.User) error {
+	return s.repo.Update(id, inp)
 }

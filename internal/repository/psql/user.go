@@ -119,15 +119,29 @@ func (r *Users) InitSchema() error {
 		CREATE TABLE IF NOT EXISTS users (
 			id SERIAL PRIMARY KEY,
 			name VARCHAR(255) NOT NULL,
-			age INTEGER NOT NULL,
-			sex VARCHAR(10) NOT NULL,
-			created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-			updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+			age INTEGER NOT NULL CHECK (age > 0 AND age < 150),
+			sex VARCHAR(10) NOT NULL CHECK (sex IN ('male', 'female', 'other')),
+			created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+			updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 		)`
 
 	_, err := r.db.Exec(query)
 	if err != nil {
 		return fmt.Errorf("failed to create users table: %w", err)
+	}
+
+	// Create indexes
+	indexes := []string{
+		`CREATE INDEX IF NOT EXISTS idx_users_name ON users(name)`,
+		`CREATE INDEX IF NOT EXISTS idx_users_age ON users(age)`,
+		`CREATE INDEX IF NOT EXISTS idx_users_created_at ON users(created_at)`,
+	}
+
+	for _, index := range indexes {
+		_, err := r.db.Exec(index)
+		if err != nil {
+			return fmt.Errorf("failed to create index: %w", err)
+		}
 	}
 
 	return nil
