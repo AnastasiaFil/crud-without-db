@@ -1,7 +1,7 @@
 // @title CRUD Without DB API
 // @version 1.0
 // @description This is a sample server for a CRUD application without a database.
-// @host localhost:3000
+// @host 16.171.25.228:3000
 // @BasePath /
 // @schemes http
 package main
@@ -28,14 +28,44 @@ func main() {
 	usersService := service.NewUsers(usersRepo)
 	handler := rest.NewHandler(usersService)
 	router := handler.InitRouter()
-	router.Use(handlers.CORS(
+
+	// Enhanced CORS configuration for Swagger UI
+	corsHandler := handlers.CORS(
+		// Allow all origins for development - in production, specify your domain
 		handlers.AllowedOrigins([]string{"*"}),
-		handlers.AllowedMethods([]string{"GET", "POST", "PUT", "DELETE", "OPTIONS"}),
-		handlers.AllowedHeaders([]string{"X-Requested-With", "Content-Type", "Authorization"}),
-	))
+		// Allow all necessary HTTP methods
+		handlers.AllowedMethods([]string{"GET", "POST", "PUT", "DELETE", "OPTIONS", "HEAD"}),
+		// Allow all necessary headers
+		handlers.AllowedHeaders([]string{
+			"Accept",
+			"Accept-Language",
+			"Content-Type",
+			"Content-Language",
+			"Origin",
+			"Authorization",
+			"X-Requested-With",
+			"X-HTTP-Method-Override",
+		}),
+		// Allow credentials if needed
+		handlers.AllowCredentials(),
+		// Expose headers that might be needed
+		handlers.ExposedHeaders([]string{"Content-Length", "Content-Type"}),
+		// Cache preflight requests for 24 hours
+		handlers.MaxAge(86400),
+	)
+
+	// Apply CORS middleware to the router
+	router.Use(corsHandler)
 
 	// Add Swagger UI route
 	router.PathPrefix("/swagger/").Handler(httpSwagger.WrapHandler)
+
+	// Add a test endpoint to verify CORS is working
+	router.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte(`{"status": "healthy", "cors": "enabled"}`))
+	}).Methods("GET", "OPTIONS")
 
 	// init & run server
 	srv := &http.Server{

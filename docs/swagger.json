@@ -9,7 +9,7 @@
         "contact": {},
         "version": "1.0"
     },
-    "host": "localhost:3000",
+    "host": "16.171.25.228:3000",
     "basePath": "/",
     "paths": {
         "/users": {
