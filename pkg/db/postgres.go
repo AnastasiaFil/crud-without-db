@@ -34,7 +34,7 @@ func NewConfigFromEnv() *Config {
 		Port:     port,
 		User:     getEnv("DB_USER", "postgres"),
 		Password: getEnv("DB_PASSWORD", ""),
-		DBName:   getEnv("DB_NAME", "crud_db"),
+		DBName:   getEnv("DB_NAME", "postgres"),
 		SSLMode:  getEnv("DB_SSLMODE", "disable"),
 	}
 

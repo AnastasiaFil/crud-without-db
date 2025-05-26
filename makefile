@@ -22,7 +22,7 @@ local: build
 # Run PostgreSQL only for local development
 db-only:
 	docker run --name crud-postgres -d \
-		-e POSTGRES_DB=crud_db \
+		-e POSTGRES_DB=postgres \
 		-e POSTGRES_USER=postgres \
 		-e POSTGRES_PASSWORD=qwerty123 \
 		-p 5432:5432 \

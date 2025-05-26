@@ -1,40 +1,20 @@
 version: '3.8'
-
 services:
-  postgres:
-    image: postgres:17-alpine
-    container_name: crud-postgres
+  app:
+    build: .
+    ports:
+      - "3000:3000"
+    depends_on:
+      - db
+  db:
+    image: postgres:latest
     environment:
-      POSTGRES_DB: crud_db
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: qwerty123
+      POSTGRES_DB: postgres
     ports:
       - "5432:5432"
     volumes:
-      - postgres_data:/var/lib/postgresql/data
-      - ./migrations:/docker-entrypoint-initdb.d
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
-  app:
-    build: .
-    container_name: crud-app
-    ports:
-      - "3000:3000"
-    environment:
-      DB_HOST: postgres
-      DB_PORT: 5432
-      DB_USER: postgres
-      DB_PASSWORD: qwerty123
-      DB_NAME: crud_db
-      DB_SSLMODE: disable
-    depends_on:
-      postgres:
-        condition: service_healthy
-    restart: unless-stopped
-
+      - db-data:/var/lib/postgresql/data
 volumes:
-  postgres_data:
+  db-data:
