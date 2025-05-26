@@ -13,8 +13,8 @@ definitions:
     type: object
 info:
   contact: {}
-  description: This is a sample server for a CRUD application without a database.
-  title: CRUD Without DB API
+  description: This is a CRUD application with PostgreSQL database.
+  title: CRUD API with PostgreSQL
   version: "1.0"
 paths:
   /users:
