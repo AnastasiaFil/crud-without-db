@@ -5,7 +5,8 @@ WORKDIR /app
 COPY go.mod go.sum ./
 RUN go mod download
 COPY . .
-RUN CGO_ENABLED=0 GOOS=linux go build -o main .
+# Build from the correct path based on your Makefile
+RUN CGO_ENABLED=0 GOOS=linux go build -o main ./cmd/main.go
 
 # Stage 2: Create the runtime image
 FROM public.ecr.aws/amazonlinux/amazonlinux:2
