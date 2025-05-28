@@ -12,10 +12,12 @@ import (
 	"crud-without-db/internal/repository/psql"
 	"crud-without-db/internal/service"
 	"crud-without-db/pkg/db"
+	"crud-without-db/pkg/logger"
 	"crud-without-db/pkg/rest"
 	"github.com/gorilla/handlers"
+	"github.com/joho/godotenv"
+	"github.com/rs/zerolog/log"
 	httpSwagger "github.com/swaggo/http-swagger"
-	"log"
 	"net/http"
 	"os"
 	"os/signal"
@@ -24,11 +26,24 @@ import (
 )
 
 func main() {
+	// Load .env file if it exists (optional for development)
+	if err := godotenv.Load(); err != nil {
+		// Don't fail if .env file doesn't exist - environment variables might be set another way
+		log.Debug().Err(err).Msg("No .env file found, using system environment variables")
+	}
+
+	// Initialize logger
+	logConfig := logger.NewConfigFromEnv()
+	logger.InitLogger(logConfig)
+
+	mainLogger := logger.GetLogger("main")
+	mainLogger.Info().Msg("Starting CRUD API application")
+
 	// Initialize database connection
 	dbConfig := db.NewConfigFromEnv()
 	database, err := db.NewPostgresConnection(dbConfig)
 	if err != nil {
-		log.Fatalf("Failed to connect to database: %v", err)
+		mainLogger.Fatal().Err(err).Msg("Failed to connect to database")
 	}
 	defer database.Close()
 
@@ -37,7 +52,7 @@ func main() {
 
 	// Initialize database schema
 	if err := usersRepo.InitSchema(); err != nil {
-		log.Fatalf("Failed to initialize database schema: %v", err)
+		mainLogger.Fatal().Err(err).Msg("Failed to initialize database schema")
 	}
 
 	// Initialize service and handler
@@ -239,20 +254,25 @@ func main() {
 	// Start a goroutine to handle shutdown
 	go func() {
 		sig := <-sigChan
-		log.Printf("Received signal: %v. Shutting down.", sig)
+		mainLogger.Info().Str("signal", sig.String()).Msg("Received shutdown signal")
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
 		if err := srv.Shutdown(ctx); err != nil {
-			log.Printf("Server shutdown failed: %v", err)
+			mainLogger.Error().Err(err).Msg("Server shutdown failed")
 		} else {
-			log.Println("Server shut down gracefully")
+			mainLogger.Info().Msg("Server shut down gracefully")
 		}
 	}()
 
 	// Start the server
-	log.Println("Server starting on :3000")
-	log.Printf("Database connected to: %s:%d/%s", dbConfig.Host, dbConfig.Port, dbConfig.DBName)
+	mainLogger.Info().
+		Str("address", ":3000").
+		Str("db_host", dbConfig.Host).
+		Int("db_port", dbConfig.Port).
+		Str("db_name", dbConfig.DBName).
+		Msg("Server starting")
+
 	if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-		log.Fatalf("listen: %s\n", err)
+		mainLogger.Fatal().Err(err).Msg("Failed to start server")
 	}
 }

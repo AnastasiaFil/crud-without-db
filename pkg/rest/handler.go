@@ -2,12 +2,13 @@ package rest
 
 import (
 	"crud-without-db/internal/domain"
+	"crud-without-db/pkg/logger"
 	"encoding/json"
 	"errors"
 	"github.com/gorilla/mux"
+	"github.com/rs/zerolog"
 	"io"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"strconv"
 )
@@ -22,11 +23,13 @@ type Users interface {
 
 type Handler struct {
 	usersService Users
+	logger       zerolog.Logger
 }
 
 func NewHandler(users Users) *Handler {
 	return &Handler{
 		usersService: users,
+		logger:       logger.GetLogger("handler"),
 	}
 }
 
@@ -56,31 +59,34 @@ func (h *Handler) InitRouter() *mux.Router {
 func (h *Handler) getUserByID(w http.ResponseWriter, r *http.Request) {
 	id, err := getIdFromRequest(r)
 	if err != nil {
-		log.Println("getUserByID() error:", err)
+		h.logger.Error().Err(err).Str("method", "getUserByID").Msg("Invalid user ID")
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
+	h.logger.Debug().Int64("user_id", id).Msg("Getting user by ID")
+
 	user, err := h.usersService.GetByID(id)
 	if err != nil {
 		if errors.Is(err, domain.ErrUserNotFound) {
-			log.Println("getUserByID() StatusBadRequest error:", err)
-			w.WriteHeader(http.StatusBadRequest)
+			h.logger.Warn().Int64("user_id", id).Msg("User not found")
+			w.WriteHeader(http.StatusNotFound)
 			return
 		}
 
-		log.Println("getUserByID() error:", err)
+		h.logger.Error().Err(err).Int64("user_id", id).Msg("Failed to get user by ID")
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
 	response, err := json.Marshal(user)
 	if err != nil {
-		log.Println("getUserByID() error:", err)
+		h.logger.Error().Err(err).Int64("user_id", id).Msg("Failed to marshal user response")
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
+	h.logger.Info().Int64("user_id", id).Str("user_name", user.Name).Msg("User retrieved successfully")
 	w.Header().Add("Content-Type", "application/json")
 	w.Write(response)
 }
@@ -96,25 +102,34 @@ func (h *Handler) getUserByID(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) createUser(w http.ResponseWriter, r *http.Request) {
 	reqBytes, err := io.ReadAll(r.Body)
 	if err != nil {
-		log.Println("createUser() readAll error:", err)
+		h.logger.Error().Err(err).Str("method", "createUser").Msg("Failed to read request body")
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
 	var user domain.User
 	if err = json.Unmarshal(reqBytes, &user); err != nil {
-		log.Println("createUser() unmarshal error:", err)
+		h.logger.Error().Err(err).Str("method", "createUser").Msg("Failed to unmarshal user data")
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
+	h.logger.Debug().
+		Str("user_name", user.Name).
+		Int("user_age", user.Age).
+		Str("user_sex", user.Sex).
+		Msg("Creating new user")
+
 	err = h.usersService.Create(user)
 	if err != nil {
-		log.Println("createUser() error:", err)
+		h.logger.Error().Err(err).
+			Str("user_name", user.Name).
+			Msg("Failed to create user")
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
+	h.logger.Info().Str("user_name", user.Name).Msg("User created successfully")
 	w.WriteHeader(http.StatusCreated)
 }
 
@@ -128,19 +143,22 @@ func (h *Handler) createUser(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) deleteUser(w http.ResponseWriter, r *http.Request) {
 	id, err := getIdFromRequest(r)
 	if err != nil {
-		log.Println("deleteUser() error:", err)
+		h.logger.Error().Err(err).Str("method", "deleteUser").Msg("Invalid user ID")
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
+	h.logger.Debug().Int64("user_id", id).Msg("Deleting user")
+
 	err = h.usersService.Delete(id)
 	if err != nil {
-		log.Println("deleteUser() error:", err)
+		h.logger.Error().Err(err).Int64("user_id", id).Msg("Failed to delete user")
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
-	w.WriteHeader(http.StatusOK)
+	h.logger.Info().Int64("user_id", id).Msg("User deleted successfully")
+	w.WriteHeader(http.StatusNoContent)
 }
 
 // @Summary Get all users
@@ -150,20 +168,23 @@ func (h *Handler) deleteUser(w http.ResponseWriter, r *http.Request) {
 // @Success 200 {array} domain.User
 // @Router /users [get]
 func (h *Handler) getAllUsers(w http.ResponseWriter, r *http.Request) {
+	h.logger.Debug().Msg("Getting all users")
+
 	users, err := h.usersService.GetAll()
 	if err != nil {
-		log.Println("getAllUsers() error:", err)
+		h.logger.Error().Err(err).Str("method", "getAllUsers").Msg("Failed to get all users")
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
 	response, err := json.Marshal(users)
 	if err != nil {
-		log.Println("getAllUsers() error:", err)
+		h.logger.Error().Err(err).Str("method", "getAllUsers").Msg("Failed to marshal users response")
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
+	h.logger.Info().Int("users_count", len(users)).Msg("Retrieved all users successfully")
 	w.Header().Add("Content-Type", "application/json")
 	w.Write(response)
 }
@@ -180,32 +201,40 @@ func (h *Handler) getAllUsers(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) updateUser(w http.ResponseWriter, r *http.Request) {
 	id, err := getIdFromRequest(r)
 	if err != nil {
-		log.Println("error:", err)
+		h.logger.Error().Err(err).Str("method", "updateUser").Msg("Invalid user ID")
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
 	reqBytes, err := ioutil.ReadAll(r.Body)
 	if err != nil {
-		log.Println("updateUser() readAll error:", err)
+		h.logger.Error().Err(err).Int64("user_id", id).Msg("Failed to read request body")
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
 	var inp domain.User
 	if err = json.Unmarshal(reqBytes, &inp); err != nil {
-		log.Println("updateUser() unmarshal error:", err)
+		h.logger.Error().Err(err).Int64("user_id", id).Msg("Failed to unmarshal user data")
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
+	h.logger.Debug().
+		Int64("user_id", id).
+		Str("user_name", inp.Name).
+		Int("user_age", inp.Age).
+		Str("user_sex", inp.Sex).
+		Msg("Updating user")
+
 	err = h.usersService.Update(id, inp)
 	if err != nil {
-		log.Println("error:", err)
+		h.logger.Error().Err(err).Int64("user_id", id).Msg("Failed to update user")
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
+	h.logger.Info().Int64("user_id", id).Str("user_name", inp.Name).Msg("User updated successfully")
 	w.WriteHeader(http.StatusOK)
 }
 
